@@ -132,5 +132,80 @@ router.delete("/:id", async (req, res) => {
     res.status(500).json({ error: "Lỗi server khi xoá blog!" });
   }
 });
+// PUT: cập nhật blog theo id
+router.put("/:id", upload.fields([
+  { name: "images_1" },
+  { name: "images_2" }
+]), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, title_1, title_2, title_3 } = req.body;
+
+    if (!name) return res.status(400).json({ error: "Thiếu name" });
+
+    const pool = await getConnection();
+
+    // Lấy blog cũ để kiểm tra ảnh hiện tại
+    const result = await pool.request()
+      .input("id", id)
+      .query("SELECT images_1, images_2 FROM blog WHERE id = @id");
+
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: "Blog không tồn tại" });
+    }
+
+    const oldBlog = result.recordset[0];
+
+    // Nếu upload ảnh mới thì dùng ảnh mới, còn không giữ ảnh cũ
+    const images_1 = req.files["images_1"] ? req.files["images_1"][0].filename : oldBlog.images_1;
+    const images_2 = req.files["images_2"] ? req.files["images_2"][0].filename : oldBlog.images_2;
+
+    // Nếu upload ảnh mới thì xóa ảnh cũ
+    const deleteOldImage = (oldFile, newFile) => {
+      if (oldFile && newFile && oldFile !== newFile) {
+        const filePath = path.join(process.cwd(), "uploads", "blogs", oldFile);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      }
+    };
+
+    deleteOldImage(oldBlog.images_1, images_1);
+    deleteOldImage(oldBlog.images_2, images_2);
+
+    // Update database
+    await pool.request()
+      .input("id", id)
+      .input("name", name)
+      .input("images_1", images_1)
+      .input("images_2", images_2)
+      .input("title_1", title_1 || null)
+      .input("title_2", title_2 || null)
+      .input("title_3", title_3 || null)
+      .query(`
+        UPDATE blog
+        SET name = @name,
+            images_1 = @images_1,
+            images_2 = @images_2,
+            title_1 = @title_1,
+            title_2 = @title_2,
+            title_3 = @title_3
+        WHERE id = @id
+      `);
+
+    // Trả về dữ liệu mới
+    const updatedBlogResult = await pool.request()
+      .input("id", id)
+      .query("SELECT * FROM blog WHERE id = @id");
+
+    const updatedBlog = updatedBlogResult.recordset[0];
+    updatedBlog.images_1 = updatedBlog.images_1 ? `${req.protocol}://${req.get("host")}/uploads/blogs/${updatedBlog.images_1}` : null;
+    updatedBlog.images_2 = updatedBlog.images_2 ? `${req.protocol}://${req.get("host")}/uploads/blogs/${updatedBlog.images_2}` : null;
+
+    res.json({ message: "Cập nhật blog thành công!", blog: updatedBlog });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Lỗi server khi cập nhật blog!" });
+  }
+});
+
 
 export default router;

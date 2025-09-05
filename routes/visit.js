@@ -119,5 +119,77 @@ router.delete("/:id", async (req, res) => {
     res.status(500).json({ error: "Lỗi server khi xoá visit" });
   }
 });
+// ================= UPDATE visit =================
+router.put("/:id", upload.fields([
+  { name: "images_1" },
+  { name: "images_2" },
+  { name: "image_3" },
+  { name: "images_4" },
+  { name: "images_5" }
+]), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, title_1, title_2, title_3, title_4, title_5 } = req.body;
+    const pool = await getConnection();
+
+    // Lấy dữ liệu cũ để kiểm tra file cần xóa
+    const oldResult = await pool.request()
+      .input("id", id)
+      .query("SELECT * FROM visit WHERE id = @id");
+
+    if (oldResult.recordset.length === 0) {
+      return res.status(404).json({ error: "Visit không tồn tại" });
+    }
+
+    const oldData = oldResult.recordset[0];
+
+    // Xử lý file upload
+    const files = req.files;
+    const newFiles = {
+      images_1: files["images_1"] ? files["images_1"][0].filename : oldData.images_1,
+      images_2: files["images_2"] ? files["images_2"][0].filename : oldData.images_2,
+      image_3: files["image_3"] ? files["image_3"][0].filename : oldData.image_3,
+      images_4: files["images_4"] ? files["images_4"][0].filename : oldData.images_4,
+      images_5: files["images_5"] ? files["images_5"][0].filename : oldData.images_5,
+    };
+
+    // Nếu có file mới thì xóa file cũ
+    Object.keys(newFiles).forEach(key => {
+      if (files[key] && oldData[key]) {
+        const filePath = path.join(process.cwd(), "uploads", "visit", oldData[key]);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      }
+    });
+
+    // Update dữ liệu
+    await pool.request()
+      .input("id", id)
+      .input("name", name || oldData.name)
+      .input("title_1", title_1 || oldData.title_1)
+      .input("title_2", title_2 || oldData.title_2)
+      .input("title_3", title_3 || oldData.title_3)
+      .input("title_4", title_4 || oldData.title_4)
+      .input("title_5", title_5 || oldData.title_5)
+      .input("images_1", newFiles.images_1)
+      .input("images_2", newFiles.images_2)
+      .input("image_3", newFiles.image_3)
+      .input("images_4", newFiles.images_4)
+      .input("images_5", newFiles.images_5)
+      .query(`
+        UPDATE visit
+        SET name=@name, title_1=@title_1, title_2=@title_2, title_3=@title_3,
+            title_4=@title_4, title_5=@title_5,
+            images_1=@images_1, images_2=@images_2, image_3=@image_3,
+            images_4=@images_4, images_5=@images_5
+        WHERE id=@id
+      `);
+
+    res.json({ message: "Cập nhật visit thành công" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Lỗi server khi cập nhật visit" });
+  }
+});
+
 
 export default router;
