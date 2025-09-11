@@ -86,7 +86,36 @@ router.get("/", async (req, res) => {
 });
 
 // ================= Update visit =================
+// ================= GET visit by ID =================
+router.get("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const pool = await getConnection();
 
+    const result = await pool.request()
+      .input("id", id)
+      .query("SELECT * FROM visit WHERE id = @id");
+
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: "Visit không tồn tại" });
+    }
+
+    const item = result.recordset[0];
+    const visit = {
+      ...item,
+      images_1: item.images_1 ? `/uploads/visit/${item.images_1}` : null,
+      images_2: item.images_2 ? `/uploads/visit/${item.images_2}` : null,
+      image_3: item.image_3 ? `/uploads/visit/${item.image_3}` : null,
+      images_4: item.images_4 ? `/uploads/visit/${item.images_4}` : null,
+      images_5: item.images_5 ? `/uploads/visit/${item.images_5}` : null,
+    };
+
+    res.json(visit);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Lỗi server khi lấy visit theo id" });
+  }
+});
 
 // ================= DELETE visit =================
 router.delete("/:id", async (req, res) => {
