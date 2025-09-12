@@ -1,47 +1,45 @@
-import express from "express";
-import { getConnection } from "../config/db.js";
+\import express from "express";
+import { getConnection } from "../db.js";
 
 const router = express.Router();
 
-// POST: tăng lượt truy cập
+// Tăng lượt xem
 router.post("/", async (req, res) => {
   try {
     const pool = await getConnection();
+
+    // Kiểm tra nếu chưa có row id=1 thì insert
     await pool.request().query(`
-      UPDATE see
-      SET view_count = view_count + 1
-      WHERE id = 1
+      IF NOT EXISTS (SELECT * FROM see WHERE id = 1)
+      BEGIN
+        INSERT INTO see (id, view_count) VALUES (1, 0)
+      END
     `);
-    res.status(201).json({ message: "Ghi nhận lượt truy cập thành công!" });
+
+    // Cập nhật +1 lượt xem
+    await pool.request().query(`
+      UPDATE see SET view_count = view_count + 1 WHERE id = 1
+    `);
+
+    res.json({ message: "✅ Đã tăng lượt xem" });
   } catch (err) {
-    console.error("❌ Lỗi khi ghi lượt truy cập:", err);
-    res.status(500).json({ error: "Lỗi server khi ghi lượt truy cập!" });
+    console.error("❌ Lỗi tăng view:", err);
+    res.status(500).json({ error: "Lỗi server" });
   }
 });
 
-// GET: tổng lượt truy cập
+// Lấy tổng lượt xem
 router.get("/total", async (req, res) => {
   try {
     const pool = await getConnection();
-    const result = await pool.request().query(`
-      SELECT view_count FROM see WHERE id = 1
-    `);
+    const result = await pool.request().query(
+      "SELECT view_count FROM see WHERE id = 1"
+    );
+
     res.json(result.recordset[0]);
   } catch (err) {
-    console.error("❌ Lỗi khi lấy tổng lượt truy cập:", err);
-    res.status(500).json({ error: "Lỗi server khi lấy dữ liệu!" });
-  }
-});
-
-// GET: xem chi tiết (debug)
-router.get("/", async (req, res) => {
-  try {
-    const pool = await getConnection();
-    const result = await pool.request().query(`SELECT * FROM see`);
-    res.json(result.recordset);
-  } catch (err) {
-    console.error("❌ Lỗi khi lấy danh sách:", err);
-    res.status(500).json({ error: "Lỗi server khi lấy danh sách!" });
+    console.error("❌ Lỗi lấy tổng view:", err);
+    res.status(500).json({ error: "Lỗi server" });
   }
 });
 
