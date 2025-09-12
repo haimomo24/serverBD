@@ -1,4 +1,4 @@
-\import express from "express";
+import express from "express";
 import { getConnection } from "../db.js";
 
 const router = express.Router();
