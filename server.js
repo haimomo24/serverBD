@@ -10,7 +10,7 @@ import seeRoutes from "./routes/see.js";
 
 const app = express();
 
-app.use(cors({ origin: "http://localhost:3000", credentials: true }));
+app.use(cors({ origin: "*"}));
 app.use(express.json());
 
 // Serve ảnh tĩnh
