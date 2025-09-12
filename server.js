@@ -6,7 +6,7 @@ import visitRoutes from "./routes/visit.js";
 import authRoutes from "./routes/auth.js";
 import promotionRoutes from "./routes/promotion.js";
 import viewRoutes from "./routes/view.js";
-
+import seeRoutes from "./routes/see.js";
 
 const app = express();
 
@@ -24,6 +24,6 @@ app.use("/api/visit", visitRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/promotion", promotionRoutes); 
 app.use("/api/view", viewRoutes);
-
+app.use("/api/see", seeRoutes);
 
 app.listen(4000, () => console.log("Server running on http://localhost:4000"));
