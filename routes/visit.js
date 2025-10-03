@@ -2,6 +2,7 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import translate from "@vitalets/google-translate-api";
 import { getConnection } from "../config/db.js";
 
 const router = express.Router();
@@ -217,6 +218,45 @@ router.put("/:id", upload.fields([
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Lỗi server khi cập nhật visit" });
+  }
+});
+// ================= GET visit English =================
+router.get("/en", async (req, res) => {
+  try {
+    const pool = await getConnection();
+    const result = await pool.request().query("SELECT * FROM visit ORDER BY id DESC");
+
+    const visits = await Promise.all(result.recordset.map(async (item) => {
+      // Dịch name và title sang tiếng Anh
+      const [name, title_1, title_2, title_3, title_4, title_5] = await Promise.all([
+        item.name ? translate(item.name, { to: "en" }).then(r => r.text).catch(() => item.name) : null,
+        item.title_1 ? translate(item.title_1, { to: "en" }).then(r => r.text).catch(() => item.title_1) : null,
+        item.title_2 ? translate(item.title_2, { to: "en" }).then(r => r.text).catch(() => item.title_2) : null,
+        item.title_3 ? translate(item.title_3, { to: "en" }).then(r => r.text).catch(() => item.title_3) : null,
+        item.title_4 ? translate(item.title_4, { to: "en" }).then(r => r.text).catch(() => item.title_4) : null,
+        item.title_5 ? translate(item.title_5, { to: "en" }).then(r => r.text).catch(() => item.title_5) : null,
+      ]);
+
+      return {
+        ...item,
+        name,
+        title_1,
+        title_2,
+        title_3,
+        title_4,
+        title_5,
+        images_1: item.images_1 ? `/uploads/visit/${item.images_1}` : null,
+        images_2: item.images_2 ? `/uploads/visit/${item.images_2}` : null,
+        image_3: item.image_3 ? `/uploads/visit/${item.image_3}` : null,
+        images_4: item.images_4 ? `/uploads/visit/${item.images_4}` : null,
+        images_5: item.images_5 ? `/uploads/visit/${item.images_5}` : null,
+      };
+    }));
+
+    res.json(visits);
+  } catch (err) {
+    console.error("Lỗi khi dịch sang tiếng Anh:", err);
+    res.status(500).json({ error: "Lỗi server khi dịch visit" });
   }
 });
 
